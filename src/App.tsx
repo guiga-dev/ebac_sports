@@ -1,58 +1,57 @@
-import { useEffect, useState } from 'react'
+import { Provider } from 'react-redux'
 import Header from './components/Header'
 import Produtos from './containers/Produtos'
-
 import { GlobalStyle } from './styles'
-
+import {
+  store,
+  useGetProdutosQuery,
+  useAppSelector,
+  useAppDispatch,
+  adicionar,
+  alternar
+} from './store'
 export type Produto = {
   id: number
   nome: string
   preco: number
   imagem: string
 }
-
-function App() {
-  const [produtos, setProdutos] = useState<Produto[]>([])
-  const [carrinho, setCarrinho] = useState<Produto[]>([])
-  const [favoritos, setFavoritos] = useState<Produto[]>([])
-
-  useEffect(() => {
-    fetch('https://api-ebac.vercel.app/api/ebac_sports')
-      .then((res) => res.json())
-      .then((res) => setProdutos(res))
-  }, [])
-
-  function adicionarAoCarrinho(produto: Produto) {
-    if (carrinho.find((p) => p.id === produto.id)) {
-      alert('Item já adicionado')
-    } else {
-      setCarrinho([...carrinho, produto])
-    }
-  }
-
-  function favoritar(produto: Produto) {
-    if (favoritos.find((p) => p.id === produto.id)) {
-      const favoritosSemProduto = favoritos.filter((p) => p.id !== produto.id)
-      setFavoritos(favoritosSemProduto)
-    } else {
-      setFavoritos([...favoritos, produto])
-    }
-  }
-
+function Loja() {
+  const {
+    data: produtos = [],
+    isLoading,
+    isError,
+    refetch
+  } = useGetProdutosQuery()
+  const carrinho = useAppSelector((s) => s.carrinho)
+  const favoritos = useAppSelector((s) => s.favoritos)
+  const dispatch = useAppDispatch()
   return (
     <>
       <GlobalStyle />
       <div className="container">
         <Header favoritos={favoritos} itensNoCarrinho={carrinho} />
+        {isLoading && <p role="status">Carregando produtos...</p>}
+        {isError && (
+          <div role="alert">
+            <p>N�o foi poss�vel carregar os produtos.</p>
+            <button onClick={() => refetch()}>Tentar novamente</button>
+          </div>
+        )}
         <Produtos
           produtos={produtos}
           favoritos={favoritos}
-          favoritar={favoritar}
-          adicionarAoCarrinho={adicionarAoCarrinho}
+          favoritar={(p) => dispatch(alternar(p))}
+          adicionarAoCarrinho={(p) => dispatch(adicionar(p))}
         />
       </div>
     </>
   )
 }
-
-export default App
+export default function App() {
+  return (
+    <Provider store={store}>
+      <Loja />
+    </Provider>
+  )
+}
